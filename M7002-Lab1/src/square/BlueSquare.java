@@ -1,4 +1,4 @@
-package pyramid;
+package square;
 
 import java.awt.Frame;
 import java.awt.event.WindowAdapter;
@@ -9,7 +9,7 @@ import com.jogamp.opengl.util.*;
 import javax.media.opengl.*;
 import javax.media.opengl.awt.GLCanvas;
 
-public class SqrPyramid implements GLEventListener  {
+public class BlueSquare implements GLEventListener  {
     public static void main(String[] args) {
         GLProfile glp = GLProfile.getDefault();
         GLProfile.initSingleton();
@@ -21,7 +21,7 @@ public class SqrPyramid implements GLEventListener  {
         frame.add(canvas);
         frame.setVisible(true);
         
-        canvas.addGLEventListener(new SqrPyramid());
+        canvas.addGLEventListener(new BlueSquare());
         Animator animator = new Animator(canvas);
         
         animator.start();
@@ -42,8 +42,9 @@ public class SqrPyramid implements GLEventListener  {
 	@Override
 	public void display(GLAutoDrawable drawable) {
 		// TODO Auto-generated method stub
+	
 		 update();
-		 pyramid(drawable,10, 1);
+		 blueSquare(drawable,0.2, 15);
 	}
 	
 	public void update(){
@@ -60,7 +61,8 @@ public class SqrPyramid implements GLEventListener  {
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		// TODO Auto-generated method stub
-		 drawable.getGL().setSwapInterval(1);
+		
+		drawable.getGL().setSwapInterval(1);
 	}
 
 	@Override
@@ -70,44 +72,32 @@ public class SqrPyramid implements GLEventListener  {
 		
 	}
 	
-	public void pyramid(GLAutoDrawable drawable, int size, int num){
-		GL2 gl = drawable.getGL().getGL2();
-		
-		gl.glClear(GL.GL_COLOR_BUFFER_BIT);
-		gl.glBegin(GL.GL_LINES);
-		double x = -1.0;
-		double y = -1.0;
-		double chg= 0.1;
-		int pyr = 2*size;
-		while(num != 0){
-			while(pyr > 0){
-				
-				if(pyr > size){	
-					gl.glVertex2d(x, y);
-					y=y+chg;
-				    gl.glVertex2d(x, y);
-				}
-				else{
-					gl.glVertex2d(x, y);
-					y=y-chg;
-				    gl.glVertex2d(x, y);
-				}
-				
-				pyr--;
-					if(pyr != 0){	
-					gl.glVertex2d(x, y);
-					x=x+chg;
-				    gl.glVertex2d(x, y);
-				}
-				
-			}
-			gl.glVertex2d(-1, -1);
-		    gl.glVertex2d(x, y);	
-		    x += chg;
-		    pyr = 2*size;
-		    num--;
-		}
-		gl.glEnd();
-	}
+	
 
-}
+		
+		public void blueSquare(GLAutoDrawable drawable, double size,int num){
+			GL2 gl = drawable.getGL().getGL2();
+			
+			double startx = -1.0 + size/2;
+			double starty = 1.0 - size/2;
+			
+			gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+			gl.glColor3f(0.0f, 0.0f, 1.0f);
+			while(num != 0){		
+				gl.glRectd(startx,starty-size,startx+size,starty);
+				
+			
+				startx += 2*size;
+				if(startx >= 1){
+					starty -= 2*size;
+					startx = -1.0 + size/2;
+				}
+				
+				num--;
+			}
+			gl.glEnd();
+		}
+		
+	}
+	
+
