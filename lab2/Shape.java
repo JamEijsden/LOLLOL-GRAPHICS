@@ -1,6 +1,8 @@
 package lab2;
 
 
+import java.awt.BorderLayout;
+import java.awt.EventQueue;
 import java.awt.Frame;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -9,9 +11,17 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+
+
+
+
+
+
+
+
+
 
 
 
@@ -22,8 +32,14 @@ import com.jogamp.opengl.util.gl2.GLUT;
 
 import javax.media.opengl.*;
 import javax.media.opengl.awt.GLCanvas;
-import javax.media.opengl.fixedfunc.GLLightingFunc;
 import javax.media.opengl.glu.GLU;
+import javax.swing.Box;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
 
 
 
@@ -33,10 +49,10 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 	
 	GLU glu = new GLU();
 	static GLCanvas canvas;
-	private float angleCube = 0;  
-	private float speedCube= -1.5f;
-	final int NULL = -1, SELECT = 1, UPDATE = 2, MOVE = 3;
+
+	final int NULL = -1, SELECT = 1, UPDATE = 2, MOVE = 3, RESIZE = 4, DELETE = 5, LIGHT = 6;
 	final int NOTHING = 0, SPHERE = 1, CUBE = 2, TORUS = 3, TEAPOT = 4;
+	int chgMode = -1;
 	int cmd = 1; 
 	int selShapeID;
 	int selectedObj;
@@ -49,8 +65,8 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
         GLCapabilities caps = new GLCapabilities(glp);
         canvas = new GLCanvas(caps);
         Shape s = new Shape();
-       
         
+       
         Frame frame = new Frame("M7002E: Lab2");
         frame.setSize(400, 400);
         
@@ -61,6 +77,7 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
         canvas.addMouseMotionListener(s);
         
         canvas.addGLEventListener(s);
+        
         Animator animator = new Animator(canvas);
         
         animator.start();
@@ -82,6 +99,10 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
     	GLU glu;
     	GL2 gl;
     	double x,y;
+    	float[] ambientClr;
+		float[] lightClr;
+		float[] diffuse;
+		float shiny;
     	float size;
     	
     	Shapes(GLU glu, GL2 gl){
@@ -98,6 +119,15 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 		public void resize() {
 			// TODO Auto-generated method stub
 			
+		}
+		
+		void changeLightning(float[] ambient, float[] light, float[] diff, float shine){
+			gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
+			gl.glMaterialfv(GL.GL_FRONT, GL2.GL_DIFFUSE, diff, 0);
+	        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_AMBIENT, ambient, 0);
+	        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, light, 0);
+	        gl.glMaterialf(GL.GL_FRONT, GL2.GL_SHININESS, shine);
+	        gl.glPopAttrib();
 		}
 		
     }
@@ -130,13 +160,13 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 		      
 		      // of the color cube
 		      gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
-		      float[] ambientClr = {0f, 0f, 0f, 1f};
+		      float[] ambientClr = {0.5f, 0.5f, 0f, 1f};
 			float[] lightClr = {1.0f, 1.0f, 1.0f, 1f};
 			float[] diffuse = {0f, 0f, 1f, 1f};
 			gl.glMaterialfv(GL.GL_FRONT, GL2.GL_DIFFUSE, diffuse, 0);
 	        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_AMBIENT, ambientClr, 0);
 	        gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, lightClr, 0);
-	        gl.glMaterialf(GL.GL_FRONT, GL2.GL_SHININESS, 60f);
+	        gl.glMaterialf(GL.GL_FRONT, GL2.GL_SHININESS, 2f);
 		      // Top-face
 		     
 		     
@@ -156,7 +186,7 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
     	float[] ambientClr = {0f, 0f, 0f, 1f};
 		float[] lightClr = {1.0f, 1.0f, 1f ,1f};
 		float[] diffuse = {0f, 1f, 0f, 1f};
-		float shiny = 60f;
+		float shiny = 2f;
 	
 		
 		GLUT glut = new GLUT();
@@ -230,7 +260,7 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 	        gl.glMaterialf(GL.GL_FRONT, GL2.GL_SHININESS, shiny);
 		
 		
-	        glut.glutSolidTeapot(0.2);
+	        glut.glutSolidTeapot((double)size);
 			gl.glPopAttrib();
 			gl.glPopMatrix();
 			
@@ -356,7 +386,7 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 		        gl.glLoadIdentity();
 		        glu.gluPickMatrix(x, (double) viewPort[3] - y, 5.0d, 5.0d, viewPort, 0);
 		       
-		        glu.gluOrtho2D(1.0f,1.0f,1f,1.0f);
+		        glu.gluOrtho2D(10.0f,10.0f,10f,10.0f);
 		        //glu.gluPerspective(60.0f, (float)canvas.getWidth()/(float)canvas.getHeight(),0.1f, 100);
 		        System.out.println("before: "+x+", "+y);
 		        
@@ -370,15 +400,40 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 		        gl.glFlush();
 		        hits = gl.glRenderMode(GL2.GL_RENDER);
 		        processHits(hits, selectBuffer);
+		        
 		        //System.out.println(mouse_x+" = " + x +", " +mouse_y+ " = "+ y);
 		        cmd = UPDATE;
 		       
 		        break;
 		      case MOVE:
 		    	  moveShape(x_s, y_s);
+		    	  for(int i=0;i<shapeList.size();i++){
+			  			shapeList.get(i).draw();
+			  		}
 		    	  cmd = UPDATE;
+		    	  break;
+		    	 
+		    	 
+		      case RESIZE:
+		    	  chgSize(chgMode);
+		    	  for(int i=0;i<shapeList.size();i++){
+			  			shapeList.get(i).draw();
+			  		}
+		    	  cmd = UPDATE;
+		    	  break;
 		    	  
+		      case DELETE:
+		    	  deleteObj();
+		    	  cmd = UPDATE;
+		    	  break;
+		    	  
+		      case LIGHT:
+		    	  customObj();
+		    	  cmd = UPDATE;
+		    	  break;
 		      }
+		    
+		  
 		
 	}
 	
@@ -416,7 +471,7 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 	        System.out.println("- - - - - - - - - - - -");
 	      }
 	    if(hits == 0){
-	    	selShapeID = -1;
+	    	selShapeID = NULL;
 	    }
 	    System.out.println("---------------------------------");
 	  }
@@ -439,7 +494,7 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 		GL2 gl = drawable.getGL().getGL2();
 		gl.getGL().setSwapInterval(1);
 		//glu.gluPerspective(60.0f, (float)canvas.getWidth()/(float)canvas.getHeight(),0.1f, 100);
-		glu.gluOrtho2D(1.0f,1.0f,1f,1.0f);
+		glu.gluOrtho2D(10.0f,10.0f,10f,10.0f);
 		gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // set background (clear) color
 	    gl.glClearDepth(1.0f);      // set clear depth value to farthest
 	    gl.glEnable(GL2.GL_DEPTH_TEST); // enables depth testing
@@ -448,9 +503,9 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 	    gl.glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT, GL2.GL_NICEST); // best perspective correction
 	    gl.glShadeModel(GL2.GL_SMOOTH); // blends colors nicely, and smoothes out lighting
 	    
-	    float[] lightPos = { 1, 5,-200,0 };        // light position
+	    float[] lightPos = { 100, 50,-200,0 };        // light position
 	    float[] noAmbient = { 0.2f, 0.2f, 0.2f, 1f };     // low ambient light
-	    float[] diffuse = { 0.25f, .25f, 0.25f, 0.25f };  // full diffuse colour
+	    float[] diffuse = { 0.25f, .25f, 0.25f, 0.25f };  // full diffuse color
 	    float[] spec = { 1.0f, 1.0f, 1.0f, 1.0f };
 	    
 	    shapeList.add(new Sphere(gl, glu, 0.0, 0.0));
@@ -496,7 +551,7 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 		    gl.glMatrixMode(GL2.GL_PROJECTION);
 		    gl.glLoadIdentity();
 		    // *((float)canvas.getWidth()/(float)canvas.getHeight())
-		    glu.gluOrtho2D(1.0f,1.0f,1f,1.0f);
+		   glu.gluOrtho2D(10.0f,10.0f,10f,10.0f);
 		   // glu.gluPerspective(60.0f, (float)canvas.getWidth()/(float)canvas.getHeight(),0.1f, 100);
 	}
 
@@ -544,6 +599,7 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 		    		shapeList.get(i).x = t_x;
 		    		shapeList.get(i).y = t_y;
 		    		shapeList.get(i).draw();
+		    		return;
 		    		
 		    	}
 		    	else{
@@ -559,19 +615,46 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
     		for(int i = 0; i < shapeList.size(); i++){
         		
     	    	if(selShapeID == shapeList.get(i).id){
-    	    		System.out.println("Selected Shape: " + shapeList.get(i).id);
+    	    		System.out.println("Selected Shape with ID: " + shapeList.get(i).id + "resized");
     	    		if(opt < 0 && shapeList.get(i).size > 0.0f) shapeList.get(i).size -= 0.01f;
     	    		else shapeList.get(i).size += 0.01f;
     	    		
     	    		shapeList.get(i).draw();
     	    		
+    	    		
     	    	}
     	    	else{
     	    		System.out.println("Searching Shape ID: " + shapeList.get(i).id);
     	    		shapeList.get(i).draw();
+    	    		
         		}
         	}
     	}
+    }
+    
+    
+    void deleteObj(){
+    	if(selShapeID != NULL){
+    		for(int i = 0; i < shapeList.size(); i++){
+        		
+    	    	if(selShapeID == shapeList.get(i).id){
+    	    		shapeList.remove(i);
+//    	    		float[] ambient = {0f, 0f, 0f, 1f};
+//    	    		float[] light = {1.0f, 1.0f, 1f ,1f};
+//    	    		float[] diff = {1f, 0f, 1f, 1f};
+//    	    		float shine = 60f;
+    	    		//shapeList.get(i).changeLightning(ambient, light, diff, shine);
+    	    		   	    		
+    	    		
+    	    	}
+    	    	else{
+    	    		System.out.println("Searching Shape ID: " + shapeList.get(i).id);
+    	    		shapeList.get(i).draw();
+    	    		
+        		}
+        	}
+    	}
+    	
     }
     
 	public void keyPressed(KeyEvent key)
@@ -619,7 +702,7 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 
 
 	public void mouseReleased(MouseEvent arg0) {
-	
+		cmd = UPDATE;
 		
 	}
 
@@ -664,17 +747,24 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 			break;
 			
 		case KeyEvent.VK_ESCAPE:
-			selShapeID = 0;
+			System.exit(0);
 			break;
 			
 		case KeyEvent.VK_8:
-			chgSize(1);
-		
+			cmd = RESIZE;
+			chgMode = -1;
 			break;
 			
 		case KeyEvent.VK_9:
-			chgSize(-1);
+			cmd = RESIZE;
+			chgMode = 1;
+			break;
 			
+		case KeyEvent.VK_DELETE:
+			cmd = DELETE;
+			break;
+		case KeyEvent.VK_ENTER:
+			cmd = LIGHT;
 			break;
 		}
 		
@@ -696,4 +786,48 @@ public class Shape implements GLEventListener, MouseListener,  KeyListener, Mous
 
 	}
 	
+	void customObj(){
+		
+		
+		JTextField rField = new JTextField(5);
+	    JTextField gField = new JTextField(5);
+	    JTextField bField = new JTextField(5);
+	    JTextField aField = new JTextField(5);
+
+
+	      JPanel myPanel = new JPanel();
+	      myPanel.add(new JLabel("r:"));
+	      myPanel.add(rField);
+	      myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+	      myPanel.add(new JLabel("g:"));
+	      myPanel.add(gField);
+	      myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+	      myPanel.add(new JLabel("b:"));
+	      myPanel.add(bField);
+	      myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+	      myPanel.add(new JLabel("a:"));
+	      myPanel.add(aField);
+
+	      int result = JOptionPane.showConfirmDialog(null, myPanel, 
+	               "Please enter values for lightning", JOptionPane.OK_CANCEL_OPTION);
+	      if (result == JOptionPane.OK_OPTION) {
+	         System.out.println("r value: " + rField.getText());
+	         System.out.println("g value: " + gField.getText());
+	         System.out.println("b value: " + bField.getText());
+	         System.out.println("a value: " + aField.getText());
+	      }
+
+	   }
+//		ArrayList<Double> input = new ArrayList<Double>();
+//		input.add(Double.parseDouble(JOptionPane.showInputDialog(this 
+//			       ,"Size")));
+//		
+//		input.add(Double.parseDouble(JOptionPane.showInputDialog(this 
+//			       ,"Ambient")));
+//		
+//		for(int i = 0; i<input.size(); i++){
+//			System.out.println(input.get(i));
+//		}
+	
 }
+	
