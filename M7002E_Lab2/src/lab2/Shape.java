@@ -6,8 +6,6 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.event.MouseWheelEvent;
-import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.nio.IntBuffer;
@@ -27,7 +25,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 public class Shape implements GLEventListener, MouseListener, KeyListener,
-		MouseMotionListener,  MouseWheelListener {
+		MouseMotionListener {
 
 	ArrayList<Shapes> shapeList = new ArrayList<Shapes>();
 
@@ -35,10 +33,11 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 	static GLCanvas canvas;
 
 	final int NULL = -1, SELECT = 1, UPDATE = 2, MOVE = 3, RESIZE = 4,
-			DELETE = 5, LIGHT = 6, PRINT = 7, MOUSEWHEEL= 8;
+			DELETE = 5, LIGHT = 6, PRINT = 7, DELETEALL= 8;
 	final int NOTHING = 0, SPHERE = 1, CUBE = 2, TORUS = 3, TEAPOT = 4;
 	int chgMode = 0;
 	int cmd = 1;
+	int prevShapeID = NULL;
 	int selShapeID;
 	int selectedObj;
 	double mouse_x, mouse_y;
@@ -81,13 +80,14 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 		int id;
 		GLU glu;
 		GL2 gl;
+		GLUT glut = new GLUT();
 		String shape;
 		double x, y, z = 0;
 		
 		float[] ambientClr = {0,0,0,1};
 		float[] lightClr = {1,1,1,1};
 		float[] diffuse = {0,1,0,1};
-		float shiny;
+		float shiny = 50;
 		float size = 0.2f;
 
 		Shapes(GLU glu, GL2 gl) {
@@ -108,11 +108,14 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 			System.out.println("Shape: " + shape);
 			System.out.println("x, y , z: " + x + ", " + y + ", " + z);
 			System.out.println("Size: " + size);
-
+			System.out.println("Ambient(RGB): {"+ambientClr[0]+", "+ambientClr[1]+", " + ambientClr[2]+"}");
+			System.out.println("Specular(RGB): {"+lightClr[0]+", "+lightClr[1]+", " + lightClr[2]+"}");
+			System.out.println("Diffuse(RGB): {"+diffuse[0]+", "+diffuse[1]+", " + diffuse[2]+"}\n");
 		}
 
 		void changeLightning(float[] ambient, float[] light, float[] diff,
 				float shine) {
+			
 			gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
 			gl.glMaterialfv(GL.GL_FRONT, GL2.GL_DIFFUSE, diff, 0);
 			gl.glMaterialfv(GL.GL_FRONT, GL2.GL_AMBIENT, ambient, 0);
@@ -125,7 +128,7 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 
 	class Cube extends Shapes {
 
-		GLUT glut = new GLUT();
+
 
 		Cube(double x, double y, float sz, GL2 gl, GLU glu) {
 			super(glu, gl);
@@ -148,9 +151,6 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 
 			// of the color cube
 			gl.glPushAttrib(GL2.GL_ALL_ATTRIB_BITS);
-			float[] ambientClr = { 0.5f, 0.5f, 0f, 1f };
-			float[] lightClr = { 1.0f, 1.0f, 1.0f, 1f };
-			float[] diffuse = { 0f, 0f, 1f, 1f };
 			gl.glMaterialfv(GL.GL_FRONT, GL2.GL_DIFFUSE, diffuse, 0);
 			gl.glMaterialfv(GL.GL_FRONT, GL2.GL_AMBIENT, ambientClr, 0);
 			gl.glMaterialfv(GL.GL_FRONT, GL2.GL_SPECULAR, lightClr, 0);
@@ -169,7 +169,7 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 	class Sphere extends Shapes {
 
 
-		GLUT glut = new GLUT();
+
 
 		Sphere(GL2 gl, GLU glu,float sz, double x, double y) {
 			super(glu, gl);
@@ -205,12 +205,9 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 	}
 
 	class teaPot extends Shapes {
-		GLUT glut = new GLUT();
+		
 
-		float[] ambientClr = { 0f, 0f, 0f, 1f };
-		float[] lightClr = { 1.0f, 1.0f, 1f, 1f };
-		float[] diffuse = { 1f, 1f, 0f, 1f };
-		float shiny = 60f;
+		
 
 		teaPot(GL2 gl, GLU glu,float sz, double x, double y) {
 			super(glu, gl);
@@ -243,12 +240,8 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 	}
 
 	class Torus extends Shapes {
-		GLUT glut = new GLUT();
+		
 
-		float[] ambientClr = { 0f, 0f, 0f, 1f };
-		float[] lightClr = { 1.0f, 1.0f, 1f, 1f };
-		float[] diffuse = { 1f, 0f, 0f, 1f };
-		float shiny = 60f;
 
 		Torus(GL2 gl, GLU glu, float sz, double x, double y) {
 			super(glu, gl);
@@ -278,29 +271,65 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 
 		}
 	}
+	void selShape(){
+		for (int i = 0; i < shapeList.size(); i++) {
+			
+			if (selShapeID == shapeList.get(i).id) {
+				System.out.println("IIID");
+				for(int h = 0; h < shapeList.get(i).ambientClr.length-2;h++){
+					shapeList.get(i).ambientClr[h] = 0.5f;	
+				}
+				shapeList.get(i).draw();
+				if(prevShapeID != NULL && selShapeID != prevShapeID)deselShape();
+			} else {
+				
+				shapeList.get(i).draw();
 
-//	void addShapes(GL2 gl, GLU glu, double x, double y) {
-//		System.out.println("addShapes: " + x + ", " + y);
-//
-//		switch (selectedObj) {
-//		case SPHERE:
-//			shapeList.add(new Sphere(gl, glu, x, y));
-//			break;
-//		case CUBE:
-//			shapeList.add(new Cube(x, y, 0.3f, gl, glu));
-//			break;
-//
-//		case TORUS:
-//			shapeList.add(new Torus(gl, glu, x, y));
-//			break;
-//
-//		case TEAPOT:
-//			shapeList.add(new teaPot(gl, glu, x, y));
-//			break;
-//		}
-//		selectedObj = NOTHING;
-//
-//	}
+			}
+		}
+	}
+	
+	void deselShape(){
+		for (int i = 0; i < shapeList.size(); i++) {
+					
+			if (prevShapeID == shapeList.get(i).id) {
+				System.out.println("PREV");
+				for(int h = 0; h < shapeList.get(i).ambientClr.length-2;h++){
+					shapeList.get(i).ambientClr[h] = 0f;	
+				}
+				shapeList.get(i).draw();
+			} else {
+				
+				shapeList.get(i).draw();
+
+			}
+		}
+	}
+
+
+	
+	void addDefShapes(GL2 gl, GLU glu, double x, double y) {
+		
+
+		switch (selectedObj) {
+		case SPHERE:
+			shapeList.add(new Sphere(gl, glu,0.2f, x, y));
+			break;
+		case CUBE:
+			shapeList.add(new Cube(x, y, 0.3f, gl, glu));
+			break;
+
+		case TORUS:
+			shapeList.add(new Torus(gl, glu, 0.2f, x, y));
+			break;
+
+		case TEAPOT:
+			shapeList.add(new teaPot(gl, glu, 0.2f, x, y));
+			break;
+		}
+		selectedObj = NOTHING;
+
+	}
 
 	public void render(GL2 gl, GLUT glut) {
 
@@ -354,9 +383,10 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 			glu.gluOrtho2D(10.0f, 10.0f, 10f, 10.0f);
 			// glu.gluPerspective(60.0f,
 			// (float)canvas.getWidth()/(float)canvas.getHeight(),0.1f, 100);
-			System.out.println("before: " + x + ", " + y);
+			
 
-			if (selectedObj != NOTHING) addShapes(gl, glu, x_s, y_s);
+			if (selectedObj != NOTHING && chgMode == 1) addShapes(gl, glu, x_s, y_s);
+			else addDefShapes(gl, glu, x_s, y_s);
 			for (int i = 0; i < shapeList.size(); i++) {
 				shapeList.get(i).draw();
 			}
@@ -365,13 +395,14 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 			gl.glPopMatrix();
 			gl.glFlush();
 			hits = gl.glRenderMode(GL2.GL_RENDER);
+			prevShapeID = selShapeID;
 			processHits(hits, selectBuffer);
+			if(selShapeID != NULL) selShape();
+			else deselShape();
 
-			// System.out.println(mouse_x+" = " + x +", " +mouse_y+ " = "+ y);
 			cmd = UPDATE;
 
 			break;
-		case MOUSEWHEEL:
 		case MOVE:
 			moveShape(x_s, y_s);
 			for (int i = 0; i < shapeList.size(); i++) {
@@ -387,14 +418,15 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 			}
 			cmd = UPDATE;
 			break;
-
+		case DELETEALL:
+			deleteObj();
 		case DELETE:
 			deleteObj();
 			cmd = UPDATE;
 			break;
 
 		case LIGHT:
-			//customObj();
+			changeLight(gl);
 
 			cmd = UPDATE;
 			break;
@@ -409,41 +441,33 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 	}
 
 	public void processHits(int hits, IntBuffer buffer) {
-		System.out.println("---------------------------------");
-		System.out.println(" HITS: " + hits);
+
 		int offset = 0;
 		int names;
 		float z1, z2;
 		for (int i = 0; i < hits; i++) {
-			System.out.println("- - - - - - - - - - - -");
-			System.out.println(" hit: " + (i + 1));
+			
 			names = buffer.get(offset);
 			offset++;
 			z1 = (float) (buffer.get(offset) & 0xffffffffL) / 0x7fffffff;
 			offset++;
 			z2 = (float) (buffer.get(offset) & 0xffffffffL) / 0x7fffffff;
 			offset++;
-			System.out.println(" number of names: " + names);
-			System.out.println(" z1: " + z1);
-			System.out.println(" z2: " + z2);
-			System.out.println(" names: ");
 
 			for (int j = 0; j < names; j++) {
-				System.out.print(" " + buffer.get(offset));
 				if (j == (names - 1)) {
-					System.out.println("<-");
+					
 					selShapeID = buffer.get(offset);
-					System.out.println("Selected Shape: " + selShapeID);
+					if(prevShapeID == selShapeID)prevShapeID = NULL;
 				} else
-					System.out.println();
+				
 				offset++;
-			}
-			System.out.println("- - - - - - - - - - - -");
+			}		
 		}
 		if (hits == 0)
+			
 			selShapeID = NULL;
-
-		System.out.println("---------------------------------");
+		
 	}
 
 	public void update() {
@@ -454,7 +478,22 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 	public void dispose(GLAutoDrawable arg0) {
 
 	}
+	public void initLight(GL2 gl, float[] ambient, float[] spec, float[] diffuse, float[] lightPos){
+		gl.glShadeModel(GL2.GL_SMOOTH); // blends colors nicely, and smoothes
+		// out lighting
 
+		
+		
+		//shapeList.add(new Sphere(gl, glu, 0.0, 0.0));
+		
+		gl.glEnable(GL2.GL_LIGHTING);
+		gl.glEnable(GL2.GL_LIGHT0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_AMBIENT, ambient, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, spec, 0);
+		gl.glLightf( GL2.GL_LIGHT1, GL2.GL_SPOT_CUTOFF, 60.0F );
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, diffuse, 0);
+		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, lightPos, 0);
+	}
 	/*
 	 * Init list!
 	 */
@@ -471,25 +510,14 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 		gl.glDepthFunc(GL2.GL_DEPTH_TEST);
 		// gl.glDepthFunc(GL2.GL_LEQUAL); // the type of depth test to do
 		gl.glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT, GL2.GL_NICEST); // best
-																		// perspective
-																		// correction
-		gl.glShadeModel(GL2.GL_SMOOTH); // blends colors nicely, and smoothes
-										// out lighting
+				
 		
-		float[] lightPos = { 100, 50, -200, 0 }; // light position
 		float[] noAmbient = { 0.2f, 0.2f, 0.2f, 1f }; // low ambient light
-		float[] diffuse = { 0.25f, .25f, 0.25f, 0.25f }; // full diffuse color
 		float[] spec = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-		//shapeList.add(new Sphere(gl, glu, 0.0, 0.0));
-
-		gl.glEnable(GL2.GL_LIGHTING);
-		gl.glEnable(GL2.GL_LIGHT0);
-		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_AMBIENT, noAmbient, 0);
-		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_SPECULAR, spec, 0);
-		gl.glLightf( GL2.GL_LIGHT1, GL2.GL_SPOT_CUTOFF, 60.0F );
-		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, diffuse, 0);
-		gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, lightPos, 0);
+		float[] diffuse = { 0.25f, .25f, 0.25f, 0.25f }; // full diffuse color
+		float[] lightPos = { 100, 50, -200, 0 }; // light position
+																		
+		initLight(gl, noAmbient, spec, diffuse, lightPos);
 		  
 		  
 
@@ -564,17 +592,13 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 			for (int i = 0; i < shapeList.size(); i++) {
 
 				if (selShapeID == shapeList.get(i).id) {
-					System.out
-							.println("Selected Shape: " + shapeList.get(i).id);
+		
 					shapeList.get(i).x = t_x;
 					shapeList.get(i).y = t_y;
 					shapeList.get(i).draw();
 					return;	
 			
 					}else {
-				
-					System.out.println("Searching Shape ID: "
-							+ shapeList.get(i).id);
 					shapeList.get(i).draw();
 				}
 			}
@@ -586,8 +610,7 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 			for (int i = 0; i < shapeList.size(); i++) {
 
 				if (selShapeID == shapeList.get(i).id) {
-					System.out.println("Selected Shape with ID: "
-							+ shapeList.get(i).id + "resized");
+				
 					if (opt < 0 && shapeList.get(i).size > 0.0f)
 						shapeList.get(i).size -= 0.01f;	
 					
@@ -596,8 +619,7 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 					
 
 				} else {
-					System.out.println("Searching Shape ID: "
-							+ shapeList.get(i).id);
+					
 					shapeList.get(i).draw();
 
 				}
@@ -618,54 +640,18 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 					// float shine = 60f;
 					// shapeList.get(i).changeLightning(ambient, light, diff,
 					// shine);
-
-				} else {
-					System.out.println("Searching Shape ID: "
-							+ shapeList.get(i).id);
+				}else {
+					
 					shapeList.get(i).draw();
 
 				}
 			}
 		}
+		if(cmd == DELETEALL)shapeList.clear();
+}
 
-	}
-
-	public void keyPressed(KeyEvent key) {
-
-	}
-
-	public void mouseEntered(MouseEvent arg0) {
-
-	}
-
-	public void mouseExited(MouseEvent arg0) {
-
-	}
-
-	@Override
-	public void mousePressed(MouseEvent e) {
-
-		cmd = SELECT;
-		mouse_x = (double) e.getX();
-		mouse_y = (double) e.getY();
-
-	}
-
-	public void mouseReleased(MouseEvent arg0) {
-		cmd = UPDATE;
-
-	}
-
-	public void mouseClicked(MouseEvent e) {
-
-	}
-
-	public void keyReleased(KeyEvent e) {
-
-	}
-
-	public void keyTyped(KeyEvent e) {
-		switch (e.getKeyChar()) {
+	public void keyPressed(KeyEvent e) {
+		switch (e.getKeyCode()) {
 		case KeyEvent.VK_1:
 			System.out.println("SPHERE");
 			selectedObj = SPHERE;
@@ -705,16 +691,64 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 
 		case KeyEvent.VK_DELETE:
 			cmd = DELETE;
+			
+			break;
+			
+		case KeyEvent.VK_BACK_SPACE:
+			cmd=DELETEALL;
 			break;
 
-		case KeyEvent.VK_ENTER:
+		case KeyEvent.VK_NUMPAD7:
 			cmd = LIGHT;
 			break;
 
-		case KeyEvent.VK_F1:
+		case KeyEvent.VK_SPACE:
 			cmd = PRINT;
 			break;
 		}
+	}
+
+	public void mouseEntered(MouseEvent arg0) {
+
+	}
+
+	public void mouseExited(MouseEvent arg0) {
+
+	}
+
+	@Override
+	public void mousePressed(MouseEvent e) {
+		
+		if(e.getModifiers()  == MouseEvent.BUTTON3_MASK){
+			cmd = SELECT;
+			chgMode = 1;
+			mouse_x = (double) e.getX();
+			mouse_y = (double) e.getY();
+		}
+		else{
+			cmd = SELECT;
+			mouse_x = (double) e.getX();
+			mouse_y = (double) e.getY();
+		}
+		
+
+	}
+
+	public void mouseReleased(MouseEvent arg0) {
+//		cmd = UPDATE;
+
+	}
+
+	public void mouseClicked(MouseEvent e) {
+
+	}
+
+	public void keyReleased(KeyEvent e) {
+
+	}
+
+	public void keyTyped(KeyEvent e) {
+		
 
 	}
 
@@ -735,7 +769,86 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 	{
 	  return str.matches("-?\\d+(\\.\\d+)?");  //match a number with optional '-' and decimal.
 	}
+	
+	// CHANGES LIGHTNING ATTRIBS
+	void changeLight(GL2 gl){
+		
+		JTextField pos0 = new JTextField(5);
+		JTextField pos1 = new JTextField(5);
+		JTextField pos2 = new JTextField(5);
+		JTextField pos3 = new JTextField(5);
+		
+		float[] ambient = { 0.2f, 0.2f, 0.2f, 1f }; // low ambient light
+		float[] spec = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float[] diffuse = { 0.25f, .25f, 0.25f, 1f }; // full diffuse color
+		float[] lightPos = { 100, 50, -200, 0 }; // light position
+		JPanel myPanel = new JPanel();
 
+		
+		myPanel.add(new JLabel("1:"));
+		myPanel.add(pos0);
+		myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+		myPanel.add(new JLabel("2:"));
+		myPanel.add(pos1);
+		myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+		myPanel.add(new JLabel("3:"));
+		myPanel.add(pos2);
+		myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+	
+		
+		
+		
+		int res = JOptionPane.showConfirmDialog(null, myPanel,
+		"Please enter values for new ambient lightning(0.0 - 1.0, decimal)", JOptionPane.OK_CANCEL_OPTION);
+		if(isNumeric(pos0.getText()) && isNumeric(pos1.getText()) && isNumeric(pos2.getText())){
+			float[] temp = {Float.parseFloat(pos0.getText()), Float.parseFloat(pos1.getText()), Float.parseFloat(pos2.getText()), 1f};
+			for(int i = 0; i < ambient.length;i++){
+				ambient[i] = temp[i];	
+			}
+		}else if(JOptionPane.CANCEL_OPTION == res){
+			
+		}else JOptionPane.showMessageDialog(null, "Not a valid input, 0.0 - 1.0 format. ambientlight options set to default");
+		
+		
+		res = JOptionPane.showConfirmDialog(null, myPanel,
+		"Please enter values for specular lightning(0.0 - 1.0, decimal)", JOptionPane.OK_CANCEL_OPTION);
+		if(isNumeric(pos0.getText()) && isNumeric(pos1.getText()) && isNumeric(pos2.getText())){
+			float[] temp = {Float.parseFloat(pos0.getText()), Float.parseFloat(pos1.getText()), Float.parseFloat(pos2.getText()), 1f};
+			for(int i = 0; i < spec.length;i++){
+				spec[i] = temp[i];	
+			}
+		}else if(JOptionPane.CANCEL_OPTION == res){
+			
+		}else JOptionPane.showMessageDialog(null, "Not a valid input, 0.0 - 1.0 format. Light options set to default");
+		
+		res = JOptionPane.showConfirmDialog(null, myPanel,
+		"Please enter values for diffuse lightning(0.0 - 1.0, decimal)", JOptionPane.OK_CANCEL_OPTION);
+		if(isNumeric(pos0.getText()) && isNumeric(pos1.getText()) && isNumeric(pos2.getText())){
+			float[] temp = {Float.parseFloat(pos0.getText()), Float.parseFloat(pos1.getText()), Float.parseFloat(pos2.getText()), 1f};
+			for(int i = 0; i < diffuse.length;i++){
+				diffuse[i] = temp[i];	
+			}
+		}else if(JOptionPane.CANCEL_OPTION == res){
+			
+		}else JOptionPane.showMessageDialog(null, "Not a valid input, 0.0 - 1.0 format. Light options set to default");
+		
+		res = JOptionPane.showConfirmDialog(null, myPanel,
+				"Please enter values for new light position(-1.0 - 1.0, decimal)", JOptionPane.OK_CANCEL_OPTION);
+				if(isNumeric(pos0.getText()) && isNumeric(pos1.getText()) && isNumeric(pos2.getText())){
+					float[] temp = {Float.parseFloat(pos0.getText()), Float.parseFloat(pos1.getText()), Float.parseFloat(pos2.getText()), 1f};
+					for(int i = 0; i < lightPos.length;i++){
+						lightPos[i] = temp[i];	
+					}
+					
+				}else if(JOptionPane.CANCEL_OPTION == res){
+					
+				}else JOptionPane.showMessageDialog(null, "Not a valid input,numbers only. ambientlight options set to default");
+				
+				initLight(gl, ambient, spec, diffuse, lightPos);
+	}
+
+	
+	//CREATES CUSTOMIZED SHAPES
 	void addShapes(GL2 gl, GLU glu, double x, double y){
 
 		
@@ -748,71 +861,83 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 		float[] ambient = {0,0,0,1};
 		float[] specular = {1,1,1,1};
 		float[] diffuse = {0,1,0,1};
-		
+		double z = 0;
 		JPanel myPanel = new JPanel();
 		
 		myPanel.add(new JLabel("Size(float):"));
 		myPanel.add(size);
-		int sizze = JOptionPane.showConfirmDialog(null, myPanel,
+		int res = JOptionPane.showConfirmDialog(null, myPanel,
 				"Choose size for the object(>0.0)", JOptionPane.OK_CANCEL_OPTION);
-				if (sizze == JOptionPane.OK_OPTION) {
-					
-					
-					}
 				if(isNumeric(size.getText())) objSize = Float.parseFloat(size.getText());
+				else if(JOptionPane.CANCEL_OPTION == res);
 				else JOptionPane.showMessageDialog(null, "Not a valid input, 0.0 - 1.0 format. Size set to default 0.2");
+		myPanel.removeAll();
 		
-		myPanel.remove(size);
 		
 		
-		myPanel.add(new JLabel("r:"));
+		myPanel.add(new JLabel("1:"));
 		myPanel.add(rField);
 		myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-		myPanel.add(new JLabel("g:"));
+		myPanel.add(new JLabel("2:"));
 		myPanel.add(gField);
 		myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-		myPanel.add(new JLabel("b:"));
+		myPanel.add(new JLabel("3:"));
 		myPanel.add(bField);
 		myPanel.add(Box.createHorizontalStrut(15)); // a spacer
 		
+		res = JOptionPane.showConfirmDialog(null, myPanel,
+				"Enter Coordinates for the object between(-1,1)xyz", JOptionPane.OK_CANCEL_OPTION);
+				if(isNumeric(rField.getText()) && isNumeric(gField.getText()) && isNumeric(bField.getText())){
+					x= Double.parseDouble(rField.getText());
+					y = Double.parseDouble(gField.getText());
+					z = Double.parseDouble(bField.getText());
+				}else if(JOptionPane.CANCEL_OPTION == res);
+					else JOptionPane.showMessageDialog(null, "Not a valid input, -1.0, 1.0 interval. Position set to mouseclick pos");
+				
 		
-		JOptionPane.showConfirmDialog(null, myPanel,
-		"Please enter values for ambient lightning(0.0 - 1.0, float)", JOptionPane.OK_CANCEL_OPTION);
+		
+		
+		
+		res = JOptionPane.showConfirmDialog(null, myPanel,
+		"Please enter values for ambient lightning(0.0 - 1.0, decimal, RGB)", JOptionPane.OK_CANCEL_OPTION);
 		if(isNumeric(rField.getText()) && isNumeric(gField.getText()) && isNumeric(bField.getText())){
 			float[] temp = {Float.parseFloat(rField.getText()), Float.parseFloat(gField.getText()), Float.parseFloat(bField.getText()), 1f};
 			for(int i = 0; i < ambient.length;i++){
 				ambient[i] = temp[i];	
 			}
-		}else JOptionPane.showMessageDialog(null, "Not a valid input, 0.0 - 1.0 format. Light options set to default");
+		}else if(JOptionPane.CANCEL_OPTION == res);
+			
+		else JOptionPane.showMessageDialog(null, "Not a valid input, 0.0 - 1.0 format. Light options set to default");
 		
 		
-		JOptionPane.showConfirmDialog(null, myPanel,
-		"Please enter values for specular lightning(0.0 - 1.0)", JOptionPane.OK_CANCEL_OPTION);
+		res = JOptionPane.showConfirmDialog(null, myPanel,
+		"Please enter values for specular lightning(0.0 - 1.0, decimal, RGB)", JOptionPane.OK_CANCEL_OPTION);
 		if(isNumeric(rField.getText()) && isNumeric(gField.getText()) && isNumeric(bField.getText())){
 			float[] temp = {Float.parseFloat(rField.getText()), Float.parseFloat(gField.getText()), Float.parseFloat(bField.getText()), 1f};
 			for(int i = 0; i < specular.length;i++){
 				specular[i] = temp[i];	
 			}
-		}else JOptionPane.showMessageDialog(null, "Not a valid input, 0.0 - 1.0 format. Light options set to default");
+		}else if(JOptionPane.CANCEL_OPTION == res);
+			
+		else JOptionPane.showMessageDialog(null, "Not a valid input, 0.0 - 1.0 format. Light options set to default");
 		
-		JOptionPane.showConfirmDialog(null, myPanel,
-		"Please enter values for diffuse lightning(0.0 - 1.0)", JOptionPane.OK_CANCEL_OPTION);
+		res = JOptionPane.showConfirmDialog(null, myPanel,
+		"Please enter values for diffuse lightning(0.0 - 1.0, decimal, RGB)", JOptionPane.OK_CANCEL_OPTION);
 		if(isNumeric(rField.getText()) && isNumeric(gField.getText()) && isNumeric(bField.getText())){
 			float[] temp = {Float.parseFloat(rField.getText()), Float.parseFloat(gField.getText()), Float.parseFloat(bField.getText()), 1f};
 			for(int i = 0; i < diffuse.length;i++){
 				diffuse[i] = temp[i];	
 			}
-		}else JOptionPane.showMessageDialog(null, "Not a valid input, 0.0 - 1.0 format. Light options set to default");
+		}else if(JOptionPane.CANCEL_OPTION == res);
+			
+		else JOptionPane.showMessageDialog(null, "Not a valid input, 0.0 - 1.0 format. Light options set to default");
 
-		
-		
-		System.out.println("addShapes: " + x + ", " + y);
 
 		switch (selectedObj) {
 		case SPHERE:
 			Sphere s = new Sphere(gl, glu,objSize, x, y);
 			shapeList.add(s);
-			
+			s.z=z;
 			for(int i = 0; i < diffuse.length;i++){
 				s.diffuse[i] = diffuse[i];
 				s.ambientClr[i] = ambient[i];
@@ -823,6 +948,7 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 		case CUBE:
 			Cube c = new Cube(x, y, objSize, gl, glu);
 			shapeList.add(c);
+			c.z = z;
 			for(int i = 0; i < diffuse.length;i++){
 				c.diffuse[i] = diffuse[i];
 				c.ambientClr[i] = ambient[i];
@@ -833,6 +959,7 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 		case TORUS:
 			Torus t = new Torus(gl, glu, objSize, x, y);
 			shapeList.add(t);
+			t.z = z;
 			for(int i = 0; i < diffuse.length;i++){
 				t.diffuse[i] = diffuse[i];
 				t.ambientClr[i] = ambient[i];
@@ -843,6 +970,7 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 		case TEAPOT:
 			teaPot p = new teaPot(gl, glu, objSize, x, y);
 			shapeList.add(p);
+			p.z=z;
 			for(int i = 0; i < diffuse.length;i++){
 				p.diffuse[i] = diffuse[i];
 				p.ambientClr[i] = ambient[i];
@@ -854,13 +982,7 @@ public class Shape implements GLEventListener, MouseListener, KeyListener,
 		
 	}
 
-	@Override
-	
-	public void mouseWheelMoved(MouseWheelEvent e) {
-		chgMode = e.getWheelRotation();
-		cmd = MOUSEWHEEL;
-		
-	}
+
 			
 
 }
